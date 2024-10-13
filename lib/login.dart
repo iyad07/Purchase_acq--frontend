@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'signup.dart';
 import 'user/dashboard.dart';
 import 'admin/admindashboard.dart';
@@ -14,7 +16,7 @@ class LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  void _login() {
+  Future<void> _login() async {
     String email = _emailController.text;
     String password = _passwordController.text;
 
@@ -22,7 +24,27 @@ class LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter both email and password')),
       );
-    } else if (email == "admin") {
+      return;
+    }
+
+    // API call to Node.js backend for login
+    var url = Uri.parse('http://localhost:3000/api/v1/auth/login'); // Update with your Node.js server URL
+    var response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'username': email, 'password': password}), // Changed 'email' to 'username'
+    );
+
+    if (response.statusCode == 200) {
+  var responseBody = json.decode(response.body);
+  print("Response Body: $responseBody"); // Add this line for debugging
+
+  // Check if the response contains 'data' and 'user'
+  if (responseBody.containsKey('data') && responseBody['data'] != null && responseBody['data'].containsKey('user')) {
+    var userRole = responseBody['data']['user']['role']; // Assuming 'role' is returned from backend
+
+    // Navigate based on user role
+    if (userRole == 'admin') {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (BuildContext context) => const AdminHome(),
@@ -31,7 +53,14 @@ class LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Administrator Login successful')),
       );
-    } else {
+    } else if (email == "admin") {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (BuildContext context) => const AdminHome(),
+        ),
+      );
+    }
+      else {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (BuildContext context) => const Home(),
@@ -41,6 +70,17 @@ class LoginPageState extends State<LoginPage> {
         const SnackBar(content: Text('User Login successful')),
       );
     }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Unexpected response format')),
+    );
+  }
+} else {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Login failed. Incorrect email or password')),
+  );
+}
+
   }
 
   @override

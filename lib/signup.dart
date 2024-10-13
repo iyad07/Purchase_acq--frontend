@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:form_acquistion/login.dart';
 
 class SignupPage extends StatefulWidget {
@@ -9,12 +11,68 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  Future<void> _signup() async {
+    String username = _usernameController.text;
+    String email = _emailController.text;
+    String password = _passwordController.text;
+    String confirmPassword = _confirmPasswordController.text;
+
+    if (username.isEmpty || email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields')),
+      );
+      return;
+    }
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
+
+    // API call to Node.js backend for signup
+    var url = Uri.parse('http://localhost:3000/api/v1/auth/signup'); // Replace with your backend URL
+    var response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'username': username,
+        'email': email,
+        'password': password,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      var responseBody = json.decode(response.body);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Signup successful!')),
+      );
+      
+      // Navigate to login page after successful signup
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (BuildContext context) => const LoginPage(),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Signup failed. Please try again.')),
+      );
+    }
+  }
   Widget _buildTextField({
     required String hintText,
     required IconData icon,
     bool isPassword = false,
+    controller,
   }) {
     return TextField(
+      controller: controller,
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(
@@ -31,7 +89,7 @@ class _SignupPageState extends State<SignupPage> {
 
   Widget _buildSignUpButton() {
     return ElevatedButton(
-      onPressed: () {},
+      onPressed: _signup,
       style: ElevatedButton.styleFrom(
         shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -135,13 +193,13 @@ class _SignupPageState extends State<SignupPage> {
                         style: TextStyle(fontSize: 15, color: Colors.grey[700]),
                       ),
                       const SizedBox(height: 30),
-                      _buildTextField(hintText: "Username", icon: Icons.person),
+                      _buildTextField(hintText: "Username", icon: Icons.person,controller: _usernameController),
                       const SizedBox(height: 20),
-                      _buildTextField(hintText: "Email", icon: Icons.email),
+                      _buildTextField(hintText: "Email", icon: Icons.email,controller: _emailController),
                       const SizedBox(height: 20),
-                      _buildTextField(hintText: "Password", icon: Icons.password, isPassword: true),
+                      _buildTextField(hintText: "Password", icon: Icons.password, isPassword: true,controller:_passwordController),
                       const SizedBox(height: 20),
-                      _buildTextField(hintText: "Confirm Password", icon: Icons.password, isPassword: true),
+                      _buildTextField(hintText: "Confirm Password", icon: Icons.password, isPassword: true,controller: _confirmPasswordController),
                       const SizedBox(height: 30),
                       _buildSignUpButton(),
                       const SizedBox(height: 10),
